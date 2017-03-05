@@ -101,6 +101,7 @@ def propagation():
 	# pool.close()
 	# pool.join()
 
+	f_copy = deepcopy(f)
 	#collision avec les obstacles
 	for i in range(1, N):
 		#On recupere la direction "opposee"
@@ -109,7 +110,7 @@ def propagation():
 		if autre == 0:
 			autre = 8
 		#si on se trouve juste apres barriere, on échange les directions
-		f[i][barrier[i]] = f[autre][barrier[0]]
+		f[i][barrier[i]] = f_copy[autre][barrier[0]]
 
 
 
@@ -181,7 +182,7 @@ if __name__ == '__main__':
 	for i in range(N):
 		est_ouest, nord_sud = vitesses[i]
 		#On calcule les points aux limites des barrieres
-		barrier[i] = np.roll(barrier[0], -1 * nord_sud, axis = 0) #-1 car l'axe y numpy est inverse
+		barrier[i] = np.roll(barrier[0], nord_sud, axis = 0) #-1 car l'axe y numpy est inverse
 		barrier[i] = np.roll(barrier[i], est_ouest, axis = 1)
 
 	##########On initialise avec un flux constant
@@ -253,10 +254,6 @@ if __name__ == '__main__':
 		# plt.draw()
 		return (fluidImage, barrierImage)
 
-	# Set up formatting for the movie files
-	# Writer = animation.writers['ffmpeg']
-	# writer = Writer(fps = 15, metadata = dict(artist = 'Me'), bitrate = 1800)
-
 	#animation
 	ani = animation.FuncAnimation(
 		fig, 
@@ -266,5 +263,4 @@ if __name__ == '__main__':
 		interval = 1, 
 		blit = True)
 
-	# ani.save('test.mp4', writer = writer)
 	plt.show()
