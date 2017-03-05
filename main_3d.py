@@ -20,13 +20,12 @@ print('Librairies importees')
 
 ################### Parametres ###################
 #Parametres spatiaux
-longueur_cuve = 10 #axe x
-largeur_cuve = 4 #axe y
-epaisseur_cuve = 2 #axe z
+longueur_cuve = 100 #axe x
+largeur_cuve = 40 #axe y
+epaisseur_cuve = 4 #axe z
 N = 15
-centre_y = largeur_cuve // 2 #on repère le centre de la zon
 
-viscosite = 0.005
+viscosite = 0.01
 tau = 3 * viscosite + 0.5
 omega = 1. / tau
 Re = 1 #Nombre de Reynolds
@@ -37,41 +36,55 @@ zc = epaisseur_cuve // 2
 rc = 1
 #Vitesse pour le flow
 #calcul recurrents
-u0 = 0.1
+u0 = 0.01
 u02 = u0 ** 2
-poids = np.array([2 / 9] + [1 / 9] * 6 + [1 / 72] * 8) #poids de D3Q15
+poids = np.array([1. / 3] + [1. / 18] * 6 + [1. / 36] * 12) #poids de D3Q19
 cs2 = 1 #paramètre de vitesse de la maille
 # nu = cs2 * (tau + 0.5)
 nu = 1
-nu2 = nu ** 2
+nu2 = 1 / 3
+
+autres = [0, 2, 1, 4, 3, 6, 5, 10, 9, 8, 7, 14, 13, 12, 11, 18, 17, 16, 15]
 
 vitesses = np.array([
 	[0, 0, 0], #Rest -> 0
-	[1, 0, 0], #+x -> 1
-	[-1, 0, 0], #-x -> 2
+	[0, 0, 1], #z ->1,
+	[0, 0, -1], #-z ->2
 	[0, 1, 0], #+y -> 3
 	[0, -1, 0], #-y -> 4
-	[0, 0, 1], #z ->5,
-	[0, 0, -1], #-z ->6,
-	[1, 1, 1], #+x+y+z -> 7
-	[-1, 1, 1], #-x+y+z -> 8
-	[1, -1, -1], #+x-y-z -> 9
-	[-1, -1, -1], #-x-y-z -> 10
-	[1, -1, 1], #+x-y+z -> 11
-	[-1, 1, -1], #-x+y-z -> 12
-	[1, 1, -1], #+x+y-z -> 13
-	[-1, -1, 1], #-x-y+z -> 14
+	[1, 0, 0], #+x -> 5
+	[-1, 0, 0], #-x -> 6
+	[1, 1, 0], #+x+y -> 7
+	[1, -1, 0], #+x-y -> 8
+	[-1, 1, 0], #-x+y -> 9
+	[-1, -1, 0], #-x-y -> 10
+	[1, 0, 1], #+x+z -> 11
+	[1, 0, -1], #+x-z -> 12
+	[-1, 0, 1], #-x+z -> 13
+	[-1, 0, -1], #-x-z -> 14
+	[0, 1, 1], #+y+z -> 15
+	[0, 1, -1], #+y-z -> 16
+	[0, -1, 1], #-y+z -> 17
+	[0, -1, -1], #-y-z -> 18
 ])
 #vecteurs vitesse vi
 #Les vecteurs sont organises telle que la somme de leurs coordonnees
 #donne la position dans le tableau de leur oppose
 
+F = np.array([0, 0, 0]) #Force de gravite
+
+
+# def zoneCylindre(x, y, z):
+# 	""" Retourne True si on est dans la zone du cylindre """
+# 	global zc, yx, xc, rc
+# 	d = (z - zc) ** 2 + (y - yc) ** 2 - rc ** 2
+# 	return d >= 0 and x <= xc
 
 def zoneCylindre(x, y, z):
 	""" Retourne True si on est dans la zone du cylindre """
 	global zc, yx, xc, rc
-	d = (z - zc) ** 2 + (y - yc) ** 2 - rc ** 2
-	return d >= 0 and x <= xc
+	d = (x - xc) ** 2 + (y - yc) ** 2 + (z - zc) ** 2 - rc ** 2
+	return d <= 0
 
 def diff(u, i, j):
 	"""Retourne duidj - dujdi"""
@@ -79,11 +92,30 @@ def diff(u, i, j):
 	dujdi = (np.roll(u[j], -1, axis = i) - np.roll(u[j], 1, axis = i))
 	return duidj - dujdi
 
+# def calculVorticite(u):
+# 	""" Autre calcul de vorticite """
+# 	terme_x = diff(u, 2, 0)
+# 	terme_y = diff(u, 1, 2)
+# 	terme_z = diff(u, 0, 1)
+# 	resultat = np.array([terme_y, terme_y, terme_z])
+# 	return resultat
+
 def calculVorticite(u):
 	""" Autre calcul de vorticite """
-	terme_x = diff(u, 2, 0)
-	terme_y = diff(u, 1, 2)
-	terme_z = diff(u, 0, 1)
+	ux, uy, uz = u
+	duzdy = np.roll(uz, -1, axis = 0) - np.roll(uz, 1, axis = 0)
+	duydz = np.roll(uy, -1, axis = 2) - np.roll(uy, 1, axis = 2)
+	terme_x = duzdy - duydz
+
+	duxdz = np.roll(ux, -1, axis = 2) - np.roll(ux, 1, axis = 2)
+	duzdx = np.roll(uz, -1, axis = 1) - np.roll(uz, 1, axis = 1)
+	terme_y = duxdz - duzdx
+
+	duydx = np.roll(uy, -1, axis = 1) - np.roll(uy, 1, axis = 1)
+	duxdy = np.roll(ux, -1, axis = 0) - np.roll(ux, 1, axis = 0)
+	terme_z = duydx - duxdy
+
+
 	resultat = np.array([terme_y, terme_y, terme_z])
 	return resultat
 
@@ -120,13 +152,12 @@ def propagation():
 	# pool.close()
 	# pool.join()
 
+	f_copy = deepcopy(f)
 	#collision avec les obstacles
 	for i in range(1, N):
 		#On recupere la direction "opposee"
-		autre = i + np.sum(vitesses)
-		print(i)
-		print(autre)
-		f[i][barrier[i]] = f[autre][barrier[0]]
+		autre = autres[i]
+		f[i][barrier[i]] = f_copy[autre][barrier[0]]
 
 
 
@@ -156,15 +187,20 @@ def collisions():
 		terme2 = 3 * ps / nu
 		terme3 = 4.5 * np.power(ps, 2) / nu2
 		f[i] = (1 - omega) * f[i] + omega * poids[i] * rho * (terme1 + terme2 + terme3)
-		# try:
-		# 	f[i] = (1 - omega) * f[i] + omega * poids[i] * rho * (terme1 + terme2 + terme3)
-		# except RuntimeWarning:
-		# 	print('hihi')
+		try:
+			f[i] = (1 - omega) * f[i] + omega * poids[i] * rho * (terme1 + terme2 + terme3)
+		except RuntimeWarning:
+			print('hihi')
+	
+	#on ajoute le champ de force
+	for i in range(N):
+		ps = np.dot(vitesses[i], F)
+		f[i] += poids[i] * ps / nu2
 	
 	#On force le flow en entree
 	terme1 = 1 - 1.5 * u02 / nu2
 
-	for i in [1, 2, 7, 8, 9, 10, 11, 12, 13, 14]:
+	for i in [1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]:
 		ps = vitesses[i, 0] * u0
 		terme2 = 3 * ps / nu
 		terme3 = 4.5 * np.abs(vitesses[i, 0]) * u02 / nu2
@@ -200,7 +236,7 @@ if __name__ == '__main__':
 	for i in range(N):
 		dx, dy, dz = vitesses[i]
 		#On calcule les points aux limites des barrieres
-		barrier[i] = np.roll(barrier[0], -1 * dy, axis = 0) #-1 car l'axe y numpy est inverse
+		barrier[i] = np.roll(barrier[0], dy, axis = 0)
 		barrier[i] = np.roll(barrier[i], dx, axis = 1)
 		barrier[i] = np.roll(barrier[i], dz, axis = 2)
 
