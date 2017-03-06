@@ -17,9 +17,9 @@ print('Librairies importees')
 ################### Parametres ###################
 
 #Parametres spatiaux
-longueur_cuve = 60 #axe x
+longueur_cuve = 50 #axe x
 largeur_cuve = 40 #axe y
-epaisseur_cuve = 1 #axe z
+epaisseur_cuve = 10 #axe z
 N = 19
 
 #parametres du fluide
